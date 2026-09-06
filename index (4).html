@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>visitor@cloud-portfolio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root{
+    --bg:#080b0d;
+    --panel:#0b1013;
+    --border:#182226;
+    --grid:rgba(95,251,241,0.03);
+    --cyan:#5ffbf1;
+    --cyan-dim:#2c8f89;
+    --violet:#b39dff;
+    --violet-dim:#6f5cad;
+    --amber:#ffb454;
+    --red:#ff5f5f;
+    --green:#7ee787;
+    --text:#cfe3e3;
+    --dim:#5b7373;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 34px 34px;
+  }
+
+  #shell {
+    position: relative;
+    max-width: 940px;
+    margin: 20px auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow:
+      0 0 0 1px rgba(95,251,241,0.04),
+      0 40px 90px -40px rgba(0,0,0,0.9);
+    overflow: hidden;
+  }
+
+  .statusbar{
+    display:flex; flex-wrap:wrap; align-items:center; gap: 14px;
+    padding: 10px 16px;
+    background: #0d1417;
+    border-bottom: 1px solid var(--border);
+    font-family:'Space Mono',monospace;
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    color: var(--dim);
+  }
+  .statusbar .resource{ color: var(--text); font-weight:700; }
+  .statusbar .sep{ color: var(--border); }
+  .statusbar .dot{
+    width:6px; height:6px; border-radius:50%; display:inline-block;
+    background: var(--green); box-shadow: 0 0 6px var(--green);
+    margin-right:5px;
+  }
+  .statusbar .healthy{ color: var(--green); }
+
+  #terminal {
+    height: min(82vh, 680px);
+    padding: 20px 18px 20px;
+    overflow-y: auto;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+    -webkit-overflow-scrolling: touch;
+  }
+  #terminal::-webkit-scrollbar{ width:8px; }
+  #terminal::-webkit-scrollbar-thumb{ background: var(--border); border-radius:4px; }
+
+  /* ---------- boot sequence ---------- */
+  #boot .bline{ color: var(--dim); margin: 1px 0; white-space: pre-wrap; font-size: 12px; }
+  #boot .ok{ color: var(--green); }
+  #boot .key{ color: var(--cyan); }
+  #boot .skip{ color: var(--dim); font-size: 10.5px; margin-top:8px; opacity:0.65; }
+
+  /* ---------- ascii scene ---------- */
+  #scene{ display:none; }
+  .scene-row{
+    display:flex; flex-wrap: nowrap; align-items:center; justify-content:center;
+    gap: 14px;
+    margin: 6px 0 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .art{
+    white-space:pre;
+    line-height:1;
+    letter-spacing:0;
+    flex-shrink:0;
+  }
+  .art.cloud{
+    color: var(--cyan);
+    font-size: clamp(4.5px, 1.1vw, 6.8px);
+  }
+  .art.shield{
+    color: var(--violet);
+    font-size: clamp(3px, 0.75vw, 4.5px);
+  }
+
+  .pulse-wrap{
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    flex-shrink:0; min-width: 130px;
+  }
+  .pulse-label{
+    font-family:'Space Mono',monospace;
+    font-size: 11px; letter-spacing: 1.5px; color: var(--amber);
+    white-space: nowrap;
+  }
+  .pulse-line{
+    width: 110px; height: 3px; position: relative;
+    background: linear-gradient(90deg, var(--cyan-dim), var(--violet-dim));
+    overflow: hidden;
+    border-radius: 2px;
+  }
+  .pulse-line::after{
+    content:""; position:absolute; top:0; left:-30%;
+    width:30%; height:100%;
+    background: linear-gradient(90deg, transparent, #fff, transparent);
+    animation: travel 2.3s linear infinite;
+    opacity: 0.8;
+  }
+  @keyframes travel{ from{left:-30%} to{left:100%} }
+
+  .name-banner{
+    color: var(--cyan);
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: clamp(14px, 3.4vw, 22px);
+    letter-spacing: 2px;
+    margin: 14px 0 4px;
+    text-shadow: 0 0 10px rgba(95,251,241,0.25);
+  }
+  .role-line{
+    text-align:center; color: var(--dim); font-size: 11.5px;
+    letter-spacing: 1px; margin-bottom: 18px;
+  }
+
+  .intro-line{ color: var(--dim); margin-bottom:2px; text-align:center; font-size: 12px; }
+  .intro-line b{ color: var(--cyan); font-weight:500; }
+
+  .line{ margin:3px 0; white-space:pre-wrap; word-break:break-word; }
+  .prompt-row{ display:flex; flex-wrap:wrap; }
+
+  .seg-user{ color: var(--cyan); }
+  .seg-at{ color: var(--dim); }
+  .seg-host{ color: var(--violet); }
+  .seg-path{ color: var(--amber); }
+  .seg-sign{ color: var(--dim); margin-right:8px; }
+
+  .user-input{ color:#eef7f7; }
+
+  .out-cmd{ color: var(--cyan); }
+  .out-heading{
+    font-family:'Space Mono',monospace;
+    color: var(--amber); font-weight:700; letter-spacing:0.5px; font-size: 12px;
+  }
+  .out-dim{ color: var(--dim); }
+  .out-err{ color: var(--red); }
+  .term-link{ color: var(--cyan); text-decoration: none; border-bottom: 1px dashed var(--cyan-dim); }
+  .term-link:hover{ color: var(--cyan-bright, #eafffb); border-bottom-style: solid; }
+
+  .card{
+    border:1px solid var(--border);
+    border-left:3px solid var(--cyan);
+    padding:8px 12px; margin:6px 0;
+    background: rgba(95,251,241,0.025);
+  }
+  .card.security{ border-left-color: var(--violet); background: rgba(179,157,255,0.025); }
+
+  #input-row{ display:flex; align-items:center; margin-top:14px; flex-wrap:wrap; }
+  #quick-cmds{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .cmd-btn{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px;
+    color: var(--cyan); background: rgba(95,251,241,0.06);
+    border:1px solid var(--cyan-dim); border-radius:14px;
+    padding:5px 12px; cursor:pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .cmd-btn:hover{ background: rgba(95,251,241,0.15); transform: translateY(-1px); }
+  .cmd-btn:active{ transform: translateY(0); }
+  .cmd-btn::before{ content:"$ "; color: var(--dim); }
+  .cmd-btn-clear{ color: var(--amber); border-color: var(--amber); background: rgba(255,180,84,0.06); }
+  .cmd-btn-clear:hover{ background: rgba(255,180,84,0.15); }
+  #cmd-input{
+    flex:1; min-width:80px;
+    background:transparent; border:none; outline:none;
+    color:#eef7f7; font-family:'JetBrains Mono',monospace; font-size:13.5px;
+    caret-color: var(--cyan);
+  }
+  #cmd-input:focus-visible{ outline: 1px dashed var(--cyan-dim); outline-offset: 3px; }
+
+  .cursor-blink{
+    display:inline-block; width:7px; height:15px;
+    background: var(--cyan); margin-left:2px;
+    animation: blink 1s steps(1) infinite;
+    vertical-align:middle;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  @media (prefers-reduced-motion: reduce){
+    .pulse-line::after{ animation:none; }
+    .cursor-blink{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="shell">
+  <div class="statusbar">
+    <span class="resource">storage-account: cloudportfolio</span>
+    <span class="sep">|</span>
+    <span>region: eastus2</span>
+    <span class="sep">|</span>
+    <span>tls: 1.2</span>
+    <span class="sep">|</span>
+    <span class="healthy"><span class="dot"></span>healthy</span>
+  </div>
+
+  <div id="terminal" tabindex="0">
+
+    <div id="boot"></div>
+
+    <div id="scene">
+      <div class="scene-row">
+<pre class="art cloud">                   &quot;ixoJUJU&amp;AZURE * BLOB @%$88$OoI,
+                .f0@* QUEUE * TABLE * FILE * STORA@Xi
+               I8GE * ENCRYPT * TLS * RBAC * IAM * SCZ&#x27;
+           &quot;=IcALE * REPLICATE * JADEN LASSITER * AZUR$UnI;
+        :z#E * BLOB * QUEUE * TABLE * FILE * STORAGE * ENCR$u&#x27;
+       oYPT * TLS * RBAC * IAM * SCALE * REPLICATE * JADEN LA@I
+      OSSITER * AZURE * BLOB * QUEUE * TABLE * FILE * STORAGE *I
+     z @ENCRYPT * TLS * RBAC * IAM * SCALE * REPLICATE * JADEN %
+   ,f$LASSITER * AZURE * BLOB * QUEUE * TABLE * FILE * STORAGE *Yf`
+ -Z ENCRYPT * TLS * RBAC * IAM * SCALE * REPLICATE * JADEN LASSITE@v
+rR * AZURE * BLOB * QUEUE * TABLE * FILE * STORAGE * ENCRYPT * TLS *c
+ RBAC * IAM * SCALE * REPLICATE * JADEN LASSITER * AZURE * BLOB * QUE
+UE * TABLE * FILE * STORAGE * ENCRYPT * TLS * RBAC * IAM * SCALE * R@
+$EPLICATE * JADEN LASSITER * AZURE * BLOB * QUEUE * TABLE * FILE * @=
+&quot;0STORAGE * ENCRYPT * TLS * RBAC * IAM * SCALE * REPLICATE * JADE&amp;o,
+  iY&amp;N LASSITER * AZURE * BLOB * QUEUE * TABLE * FILE * STORAGE c.
+    .+U&amp;* ENCRYPT * TLS * RBAC * IAM * SCALE * REPLICATE * JA@Z*
+       `icQ@DEN LASSITER * AZURE * BLOB * QUEUE * TABLE *@#Jt&#x27;
+           `-tuYQ$@ FILE * STORAGE * ENCRYPT * TLS 8#Xcf+&#x27;
+                  `:-iIxzcJJ000000O000000UJozvIi+:&#x27;
+
+</pre>
+        <div class="pulse-wrap">
+          <span class="pulse-label">SECURING</span>
+          <div class="pulse-line"></div>
+        </div>
+<pre class="art shield">              0
+  1                                   1
+                                1                        1
+                      101100000010101         0  1
+                    10010110111101001101
+                 10100010101110111011001100             0
+         0      101111001001111110101110010           1 1
+              101011011111  1  0 11011000000       0
+             1100110000            1001001001           0
+            001001101                 11010001         0
+            10011111                  111110001
+ 1         000110110                   01010111
+           0001100                      0101010
+           01000111    1                1000000  1
+        1  101011101                 1  1111101
+           00000110                    11111110          0
+           1000001               1      11110101
+           0111010            0         1111010      1
+           0111110                      0001110     1
+           0011010            1         1110110
+      0 10010110111  1000 1 0   1100 1111001011 0000
+      00111010010101100010000111110010111110110101011
+   1  00101110111001001111111100111100100010010 01110
+      000  011100001011100011011000010111010000  0111
+     000010110000010010010010 0101001100100101001101
+  1   11010100111111100001      100100000001100010111
+     01101101001001100110        00101101010111101111
+ 1  1001100101010000100100       1101100110111100111
+     0000011101111001001101     00101110010101001001
+     01100001000010011000001   011010100101010011011
+      000010001101111101110    001111000000100101111
+     0111010101101101001100    0001001111100001101101 00
+     0111101110010101111111     101001010111111111111
+     0101011101001100111101     01110001011001100001
+      0010011011110101001111001011100101011010001010     0
+     000100100011011011000111100010101100010010100001
+      0101111011001011100001000101001100101101010110     0
+      100  101110011001001110011000000110111101   00
+      01001110010110000111010100111111110001010 00011
+  1  010001010101000101001011010010111011010100111110
+      00  10     0 0 101   0 10     1  0000   000 11
+   0                             1</pre>
+      </div>
+
+      <div class="name-banner">JADEN LASSITER</div>
+      <div class="role-line">CLOUD SECURITY ANALYST</div>
+
+      <div class="intro-line">deployed on Azure Blob Storage static hosting &mdash; click a command below or type <b>help</b> to see them all</div>
+      <div class="intro-line" style="margin-bottom:14px;">type <b>clear</b> anytime to reset the screen</div>
+
+      <div id="history"></div>
+
+      <div id="quick-cmds">
+        <button class="cmd-btn" data-cmd="about">about</button>
+        <button class="cmd-btn" data-cmd="experience">experience</button>
+        <button class="cmd-btn" data-cmd="certifications">certifications</button>
+        <button class="cmd-btn" data-cmd="skills">skills</button>
+        <button class="cmd-btn" data-cmd="projects">projects</button>
+        <button class="cmd-btn" data-cmd="storage">storage</button>
+        <button class="cmd-btn" data-cmd="security">security</button>
+        <button class="cmd-btn" data-cmd="contact">contact</button>
+        <button class="cmd-btn cmd-btn-clear" data-cmd="clear">clear</button>
+      </div>
+
+      <div id="input-row">
+        <span class="seg-sign">
+          <span class="seg-user">visitor</span><span class="seg-at">@</span><span class="seg-host">cloud-portfolio</span> <span class="seg-path">~/portfolio</span> <span class="seg-at">$</span>
+        </span>
+        <input id="cmd-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="terminal command input" />
+        <span class="cursor-blink" id="fake-cursor"></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const bootEl = document.getElementById('boot');
+const sceneEl = document.getElementById('scene');
+const historyEl = document.getElementById('history');
+const input = document.getElementById('cmd-input');
+const termEl = document.getElementById('terminal');
+const fakeCursor = document.getElementById('fake-cursor');
+
+let cmdHistory = [];
+let historyIndex = -1;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---- EDIT YOUR CONTENT HERE ----
+const DATA = {
+  name: "Jaden Lassiter",
+  role: "Cloud Security Analyst",
+  bio: [
+    "Born and raised in Raleigh, NC, and a UNCG grad who's always loved sports and technology in equal measure.",
+    "Ran my own basketball training program for middle school girls in college. Now I bring that same drive to cloud security.",
+    "Currently deep in Azure Storage: Blob, Queue, File, and Table, one service at a time."
+  ],
+  experience: [
+    { name: "Security Analyst &mdash; Varonis", when: "05/2025 &ndash; Present",
+      desc: "Graveyard shift, 24/7 SOC &mdash; working through roughly 70 alerts most nights and looking for the pattern behind them, not just closing tickets. Partnering with engineering and IR to automate the repetitive work took our backlog down 30%. Team leads selected me to help evaluate a new agentic triage pilot, measuring its impact on analyst efficiency, SLA performance, recall, and investigation quality &mdash; my feedback helped tune the model, cutting average handling time by 3 minutes per alert." },
+    { name: "Internal Auditor &mdash; NCDPS", when: "04/2025 &ndash; 07/2025",
+      desc: "Learned to audit by the book, following IIA standards and ethics on every engagement. My main focus was Procurement Card audits across NCDPS affiliates, realigning them back into compliance. I also investigated an admin portal outage caused by an expired SSL certificate, using ISO and NIST guidelines to trace the gap in their automated renewal process and tighten certificate management going forward." },
+    { name: "Cybersecurity Workforce Trainee &mdash; SENTINEL Program", when: "11/2024 &ndash; 07/2025",
+      desc: "Built my networking foundation here &mdash; using Cisco Packet Tracer to troubleshoot infrastructure and design secure networks from the ground up. Ran capture-the-flag exercises in Kali to sharpen real offensive and defensive instincts, and this is where my cloud curiosity actually started, diving into threat analysis on critical infrastructure." },
+    { name: "Sales Development Representative &mdash; TPX Communications", when: "02/2022 &ndash; 04/2024",
+      desc: "Security wasn't my job title yet, but it was already the job &mdash; recommending cloud and telecom solutions that had to hold up against HIPAA, PCI, and FTCC standards. I had to explain why a deployment was secure, not just that it was. That instinct has stuck with me ever since." }
+  ],
+  certifications: [
+    { name: "CompTIA Security+", when: "April 2025" },
+    { name: "Cisco CCST Cybersecurity", when: "July 2025" },
+    { name: "Cisco CCST Networking", when: "February 2025" },
+    { name: "ISC2 Certified in Cybersecurity (CC)", when: "December 2024" },
+    { name: "AZ-900: Azure Fundamentals", when: "April 2026" }
+  ],
+  projects: [
+    { name: "cloud-storage-101", desc: "Static site hosted on Azure Blob Storage (this page)." },
+    { name: "queue-message-demo", desc: "Producer/consumer SOC alert queue on Azure Queue Storage &mdash; live on GitHub.", url: "https://github.com/Cybertech2005/Soc-alert-queue-demo" },
+    { name: "table-data-lookup", desc: "Procurement Card audit tool on Azure Table Storage &mdash; live on GitHub.", url: "https://github.com/Cybertech2005/Procurement-card-audit-demo" }
+  ],
+  skills: ["Azure Storage (Blob, Queue, Table)", "Python Scripting", "SIEM & Log Analysis (Splunk)", "Threat Detection", "Active Directory", "Networking", "Linux", "Git & GitHub"],
+  contact: { email: "Jlassit145@gmail.com", github: "github.com/Cybertech2005", linkedin: "www.linkedin.com/in/jadenlcybersecurity" }
+};
+// ---------------------------------
+
+const commands = {
+  help: () => `
+<span class="out-heading">AVAILABLE COMMANDS</span>
+<span class="out-cmd">about</span>       &mdash; who I am
+<span class="out-cmd">experience</span>  &mdash; where I've worked
+<span class="out-cmd">certifications</span> &mdash; certs I've earned
+<span class="out-cmd">skills</span>      &mdash; tools & technologies
+<span class="out-cmd">projects</span>    &mdash; things I've built
+<span class="out-cmd">storage</span>     &mdash; explain Azure's 4 storage types
+<span class="out-cmd">security</span>    &mdash; how I think about cloud security
+<span class="out-cmd">contact</span>     &mdash; how to reach me
+<span class="out-cmd">clear</span>       &mdash; clear the screen
+<span class="out-cmd">whoami</span>      &mdash; just visitor
+`,
+  about: () => `
+<span class="out-heading">${DATA.name}</span> &mdash; <span class="out-dim">${DATA.role}</span>
+${DATA.bio.join('\n')}
+`,
+  experience: () => `
+<span class="out-heading">EXPERIENCE</span>
+${DATA.experience.map(e => `<div class="card"><span class="out-cmd">${e.name}</span> <span class="out-dim">&mdash; ${e.when}</span><br>${e.desc}</div>`).join('')}
+`,
+  certifications: () => `
+<span class="out-heading">CERTIFICATIONS</span>
+${DATA.certifications.map(c => `  &bull; ${c.name}`).join('\n')}
+`,
+  skills: () => `
+<span class="out-heading">SKILLS</span>
+${DATA.skills.map(s => `  &bull; ${s}`).join('\n')}
+`,
+  projects: () => `
+<span class="out-heading">PROJECTS</span>
+${DATA.projects.map(p => `<div class="card"><span class="out-cmd">${p.url ? `<a class="term-link" href="${p.url}" target="_blank" rel="noopener noreferrer">${p.name}</a>` : p.name}</span><br><span class="out-dim">${p.desc}</span></div>`).join('')}
+`,
+  storage: () => `
+<span class="out-heading">AZURE STORAGE, THROUGH A SECURITY LENS</span>
+<div class="card"><span class="out-cmd">Blob Storage</span> &mdash; the filing cabinet for unstructured data: files, images, backups. Also the #1 place a misconfigured public-access setting turns into a breach headline.</div>
+<div class="card"><span class="out-cmd">Queue Storage</span> &mdash; messages processed one at a time, in order. Same discipline as triaging a SOC alert queue &mdash; the alert waits, but it doesn't get skipped.</div>
+<div class="card"><span class="out-cmd">File Storage</span> &mdash; fully managed file shares, mountable like a network drive. Same lesson from the SSL certificate outage I traced at NCDPS: managed doesn't mean unattended.</div>
+<div class="card"><span class="out-cmd">Table Storage</span> &mdash; a NoSQL key-value store built for fast lookups. Same instinct behind the Procurement Card audits I ran at NCDPS &mdash; structured records are only safe if someone's actually reviewing them.</div>
+`,
+  security: () => `
+<span class="out-heading">SECURITY MINDSET</span>
+<div class="card security"><span class="out-cmd">Least privilege</span> &mdash; scope access with RBAC/SAS tokens instead of handing out account keys.</div>
+<div class="card security"><span class="out-cmd">Encryption</span> &mdash; data encrypted at rest by default, HTTPS/TLS 1.2 enforced in transit.</div>
+<div class="card security"><span class="out-cmd">Network controls</span> &mdash; firewalls, private endpoints, and public-access rules on storage accounts.</div>
+<span class="out-dim">Still learning &mdash; but treating "secure by default" as a habit, not an afterthought.</span>
+`,
+  contact: () => `
+<span class="out-heading">CONTACT</span>
+email:     <a class="term-link" href="mailto:${DATA.contact.email}">${DATA.contact.email}</a>
+github:    <a class="term-link" href="https://${DATA.contact.github}" target="_blank" rel="noopener noreferrer">${DATA.contact.github}</a>
+linkedin:  <a class="term-link" href="https://${DATA.contact.linkedin}" target="_blank" rel="noopener noreferrer">${DATA.contact.linkedin}</a>
+`,
+  whoami: () => `just a visitor &mdash; but feel free to type <span class="out-cmd">about</span>`,
+  clear: () => { historyEl.innerHTML = ''; return null; },
+};
+
+function printLine(html){
+  const div = document.createElement('div');
+  div.className = 'line';
+  div.innerHTML = html;
+  historyEl.appendChild(div);
+}
+
+function runCommand(raw){
+  const cmd = raw.trim();
+  const row = document.createElement('div');
+  row.className = 'prompt-row line';
+  row.innerHTML = `<span class="seg-sign"><span class="seg-user">visitor</span><span class="seg-at">@</span><span class="seg-host">cloud-portfolio</span> <span class="seg-path">~/portfolio</span> <span class="seg-at">$</span></span><span class="user-input">${escapeHtml(cmd)}</span>`;
+  historyEl.appendChild(row);
+
+  if (cmd === '') return;
+  const key = cmd.toLowerCase();
+  if (commands[key]) {
+    const out = commands[key]();
+    if (out !== null && out !== undefined) printLine(out);
+  } else {
+    printLine(`<span class="out-err">command not found: ${escapeHtml(cmd)}</span> &mdash; try <span class="out-cmd">help</span>`);
+  }
+}
+
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter'){
+    runCommand(input.value);
+    cmdHistory.push(input.value);
+    historyIndex = cmdHistory.length;
+    input.value = '';
+    termEl.scrollTop = termEl.scrollHeight;
+  } else if (e.key === 'ArrowUp'){
+    e.preventDefault();
+    if (historyIndex > 0){ historyIndex--; input.value = cmdHistory[historyIndex] || ''; }
+  } else if (e.key === 'ArrowDown'){
+    e.preventDefault();
+    if (historyIndex < cmdHistory.length - 1){ historyIndex++; input.value = cmdHistory[historyIndex] || ''; }
+    else { historyIndex = cmdHistory.length; input.value = ''; }
+  }
+});
+
+termEl.addEventListener('click', () => input.focus());
+input.addEventListener('focus', () => fakeCursor.style.display = 'none');
+input.addEventListener('blur', () => fakeCursor.style.display = 'inline-block');
+
+document.querySelectorAll('.cmd-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    runCommand(btn.dataset.cmd);
+    termEl.scrollTop = termEl.scrollHeight;
+    input.focus();
+  });
+});
+
+// ---------- boot / verification sequence ----------
+const bootLines = [
+  { text: "az storage account show --name cloudportfolio", kind: "cmd" },
+  { text: "  provisioningState : Succeeded", kind: "ok" },
+  { text: "  minimumTlsVersion : TLS1_2", kind: "ok" },
+  { text: "  encryption        : Microsoft.Storage (enabled)", kind: "ok" },
+  { text: "  publicNetworkAccess : Enabled (read-only, $web container)", kind: "ok" },
+  { text: "Resolving static website endpoint...", kind: "ok" },
+  { text: "Session verified.", kind: "ok" }
+];
+
+function revealScene(){
+  sceneEl.style.display = 'block';
+  input.focus();
+}
+
+function typeBoot(){
+  let i = 0;
+  function nextLine(){
+    if (i >= bootLines.length){ revealScene(); return; }
+    const div = document.createElement('div');
+    div.className = 'bline';
+    bootEl.appendChild(div);
+    const item = bootLines[i];
+    const label = document.createElement('span');
+    if (item.kind === 'cmd'){
+      div.innerHTML = '<span class="key">$ </span>';
+    } else {
+      div.innerHTML = '<span class="ok">✓</span> ';
+    }
+    div.appendChild(label);
+    let charI = 0;
+    const typer = setInterval(() => {
+      label.textContent = item.text.slice(0, charI);
+      charI++;
+      if (charI > item.text.length){
+        clearInterval(typer);
+        i++;
+        setTimeout(nextLine, 90);
+      }
+    }, 10);
+  }
+  nextLine();
+}
+
+if (reduceMotion){
+  bootEl.style.display = 'none';
+  revealScene();
+} else {
+  const skipHint = document.createElement('div');
+  skipHint.className = 'skip';
+  skipHint.textContent = 'press any key to skip';
+  bootEl.appendChild(skipHint);
+  let skipped = false;
+  function skipBoot(){
+    if (skipped) return;
+    skipped = true;
+    bootEl.innerHTML = '';
+    revealScene();
+    window.removeEventListener('keydown', skipBoot);
+    window.removeEventListener('click', skipBoot);
+  }
+  window.addEventListener('keydown', skipBoot);
+  window.addEventListener('click', skipBoot, { once:true });
+  typeBoot();
+  const origReveal = revealScene;
+  revealScene = function(){
+    if (skipped) return;
+    skipped = true;
+    window.removeEventListener('keydown', skipBoot);
+    origReveal();
+  };
+}
+</script>
+
+</body>
+</html>
