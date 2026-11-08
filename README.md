@@ -5,7 +5,9 @@ just a single self-contained HTML file. Hosted live on Azure Blob Storage
 static website hosting.
 
 **Live site:** https://azureblob14.z19.web.core.windows.net/
-[![Watch the demo](https://cdn.loom.com/sessions/thumbnails/67dc627cec7945b4b83a440d3a8740ad-with-play.gif)](https://www.loom.com/share/67dc627cec7945b4b83a440d3a8740ad)
+## Demo
+
+[![Click here for walkthrough](https://img.shields.io/badge/▶%20Click%20here%20for%20walkthrough-625DF5?style=for-the-badge&logo=loom&logoColor=white)](https://www.loom.com/share/67dc627cec7945b4b83a440d3a8740ad)
 
 ## What it does
 
