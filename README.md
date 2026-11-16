@@ -7,7 +7,7 @@ static website hosting.
 **Live site:** https://azureblob14.z19.web.core.windows.net/
 ## Demo
 
-[![Click here for walkthrough](https://www.loom.com/share/d235b67c9f2848809a9e59384c695ec8)
+[![Click here for walkthrough](https://img.shields.io/badge/▶%20Click%20here%20for%20walkthrough-625DF5?style=for-the-badge&logo=loom&logoColor=white)](https://www.loom.com/share/d235b67c9f2848809a9e59384c695ec8)
 
 ## What it does
 
